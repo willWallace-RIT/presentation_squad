@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Presentation Squad - Live Deck & Video Feed</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: monospace; background: #0a0a0a; color: #f0f0f0; margin: 0; padding: 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 20px; height: 90vh; }
+        .panel { background: #161616; border: 1px solid #333; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .slide-screen { background: #222; border: 2px solid #ff4500; height: 60%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; position: relative; }
+        .video-box { background: #111; border: 1px dashed #555; height: 30%; display: flex; align-items: center; justify-content: center; color: #777; }
+        input, button, textarea { background: #222; color: #00ffcc; border: 1px solid #00ffcc; padding: 8px; font-family: monospace; margin-top: 5px; width: 100%; box-sizing: border-box; }
+        button:hover { background: #00ffcc; color: #111; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <div>
+            <h2>SLIDE DECK: <span id="display-topic">Awaiting Directive</span></h2>
+            <div class="slide-screen">
+                <h1 id="slide-title">Loading Propaganda Slides...</h1>
+                <p id="slide-content">Stand by for dice roll & presenter assignment.</p>
+            </div>
+        </div>
+        <div class="video-box">
+            [ WebRTC / Video Feed Integration Slot - Connect via Discord Stage / Video ]
+        </div>
+    </div>
+
+    <div class="panel">
+        <div>
+            <h3>DIRECTOR'S TERMINAL</h3>
+            <p>Room: <span id="room-display"></span></p>
+            <label>Topic / Custom Prompt:</label>
+            <input type="text" id="custom-topic" placeholder="e.g. Mandatory Smile Protocols">
+            <label><input type="checkbox" id="randomize-toggle" checked> Full Procedural Randomization</label>
+            <button onclick="updateDeck()">Push Slide Configuration</button>
+        </div>
+        <div>
+            <h3>VOTING & WEIGHT MATRIX</h3>
+            <p>Ghost Voting Weights Active (Longer survival = higher weight)</p>
+            <div id="voting-status">Awaiting round completion...</div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room') || 'default-room';
+        const pass = urlParams.get('pass') || '';
+
+        document.getElementById('room-display').innerText = roomId;
+
+        socket.emit('join_room', { roomId, username: 'User_' + Math.floor(Math.random()*1000), password: pass });
+
+        socket.on('game_state', (state) => {
+            renderState(state);
+        });
+
+        socket.on('deck_updated', (state) => {
+            renderState(state);
+        });
+
+        function renderState(state) {
+            document.getElementById('display-topic').innerText = state.topic;
+            if(state.slides && state.slides.length > 0) {
+                document.getElementById('slide-title').innerText = state.topic;
+                document.getElementById('slide-content').innerText = state.slides[Math.floor(Math.random() * state.slides.length)];
+            }
+        }
+
+        function updateDeck() {
+            const topic = document.getElementById('custom-topic').value || "State-Sanctioned Optimism";
+            const isRandom = document.getElementById('randomize-toggle').checked;
+            const slides = isRandom ? [
+                "Efficiency Through Compliance", 
+                "Graphs Indicating Upward Trajectories", 
+                "The Absolute Necessity of Surveillance"
+            ] : [topic, "Detailed Implementation", "Final Compliance Check"];
+
+            socket.emit('update_deck', { roomId, topic, slides, isRandom });
+        }
+    </script>
+</body>
+</html>
